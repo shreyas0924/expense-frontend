@@ -22,6 +22,7 @@ class LoginService {
           Authorization: "Bearer " + accessToken,
           "X-Requested-With": "XMLHttpRequest",
         },
+
       });
 
       if (response.status !== 200) {
@@ -68,4 +69,5 @@ class LoginService {
   }
 }
 
-export default LoginService;
+const loginServiceInstance = new LoginService();
+export default loginServiceInstance;

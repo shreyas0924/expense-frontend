@@ -5,9 +5,10 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import LoginService from "../services/login-service";
 import axios from "axios";
 import { SERVER_AUTH_URL } from "../utils/constants";
+import { useNavigate } from "react-router-dom";
+import loginService from "../services/login-service";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -28,34 +29,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const loginService = new LoginService();
-
+  
+  const navigate = useNavigate();
   // Check authentication status on mount
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const token = loginService.getAccessToken();
-        setAccessToken(token);
+useEffect(() => {
+  const checkAuthStatus = async () => {
+    try {
+      const token = loginService.getAccessToken();
+      let authenticated = false;
 
-        if (token) {
-          const isLoggedIn = await loginService.isLoggedIn();
-          setIsAuthenticated(isLoggedIn);
-
-          if (!isLoggedIn) {
-            // Try to refresh token if direct login check fails
-            const refreshed = await refreshAuth();
-            setIsAuthenticated(refreshed);
-          }
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-      } finally {
-        setLoading(false);
+      if (token) {
+        authenticated = await loginService.isLoggedIn();
       }
-    };
 
-    checkAuthStatus();
-  }, []);
+      if (!authenticated) {
+        authenticated = await refreshAuth();
+      }
+
+      setIsAuthenticated(authenticated);
+      if (authenticated) {
+        navigate("/dashboard");
+      } else {
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      setIsAuthenticated(false);
+      navigate("/login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  checkAuthStatus();
+}, []);
+
+
 
   const login = (accessToken: string, refreshToken: string) => {
     loginService.setAccessToken(accessToken);

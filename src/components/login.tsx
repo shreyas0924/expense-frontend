@@ -2,8 +2,8 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import LoginService from "../services/login-service";
 import { SERVER_AUTH_URL } from "../utils/constants";
+import loginService from "../services/login-service";
 
 const Login: React.FC = () => {
   const [userName, setUserName] = useState("");
@@ -12,7 +12,6 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const loginService = new LoginService();
 
   const refreshToken = async (): Promise<boolean> => {
     console.log("Inside Refresh token");
