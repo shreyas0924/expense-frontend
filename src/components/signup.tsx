@@ -1,74 +1,89 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
-import { SERVER_AUTH_URL } from '../utils/constants';
+const SERVER_AUTH_URL = import.meta.env.VITE_APP_SERVER_AUTH_URL;
 
 const SignUp: React.FC = () => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [userName, setUserName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [userName, setUserName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const navigate = useNavigate();
-  const { login } = useAuth();
-  
+  const { login, isAuthenticated, loading } = useAuth();
 
   const handleSignUp = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError(null);
-  
-  try {
-    const response = await axios.post(
-      `${SERVER_AUTH_URL}/auth/v1/signup`,
-      {
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        phone_number: phoneNumber,
-        password: password,
-        username: userName,
-      },
-      {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(
+        `${SERVER_AUTH_URL}/auth/v1/signup`,
+        {
+          username: userName,
+          email: email,
+          password: password,
+          first_name: "John",
+          last_name: "Doe",
+          phone_number: 8792866580,
         },
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+
+        if (data["accessToken"] && data["token"]) {
+          login(data["accessToken"], data["token"]);
+          navigate("/dashboard");
+        } else {
+          setError("Invalid response from server");
+        }
+      } else {
+        setError("Failed to sign up");
       }
-    );
-    
-    if (response.status === 200) {
-      const data = response.data;
-      console.log(data);
-      console.log(data['accessToken']);
-      console.log(data['token']);
-      
-      localStorage.setItem('accessToken', data['accessToken']);
-      localStorage.setItem('refreshToken', data['token']);
-      
-      login(data['accessToken'], data['token']);
-      navigate('/dashboard');
-    } else {
-      const errorData = response.data;
-      setError(errorData.message || 'Failed to sign up');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message || "Sign up failed";
+        setError(errorMessage);
+      } else {
+        setError("An error occurred during sign up. Please try again.");
+      }
+      console.error("Error during sign up:", error);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error during sign up:', error);
-    setError('An error occurred during sign up. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-  const gotoLogin = () => {
-    navigate('/login');
   };
+
+  const gotoLogin = () => {
+    navigate("/login");
+  };
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  // Show loading spinner while auth context is loading
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -76,50 +91,19 @@ const SignUp: React.FC = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold">Sign Up</h1>
         </div>
-        
+
         {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-100 rounded">
+          <div className="p-3 text-sm text-red-600 bg-red-100 border border-red-200 rounded">
             {error}
           </div>
         )}
-        
+
         <form className="space-y-4" onSubmit={handleSignUp}>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                First Name
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                type="text"
-                required
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="First Name"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                Last Name
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                type="text"
-                required
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Last Name"
-              />
-            </div>
-          </div>
-          
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-700"
+            >
               Username
             </label>
             <input
@@ -131,11 +115,17 @@ const SignUp: React.FC = () => {
               onChange={(e) => setUserName(e.target.value)}
               className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Username"
+              disabled={isLoading}
+              minLength={3}
+              maxLength={20}
             />
           </div>
-          
+
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700"
+            >
               Email
             </label>
             <input
@@ -147,11 +137,16 @@ const SignUp: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Email"
+              disabled={isLoading}
+              maxLength={50}
             />
           </div>
-          
+
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
               Password
             </label>
             <input
@@ -163,40 +158,33 @@ const SignUp: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Password"
+              disabled={isLoading}
             />
           </div>
-          
-          <div>
-            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-              Phone Number
-            </label>
-            <input
-              id="phoneNumber"
-              name="phoneNumber"
-              type="tel"
-              required
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Phone Number"
-            />
-          </div>
-          
+
           <div className="pt-4">
             <button
               type="submit"
               disabled={isLoading}
-              className="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating account...' : 'Sign Up'}
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating account...
+                </div>
+              ) : (
+                "Sign Up"
+              )}
             </button>
           </div>
         </form>
-        
+
         <div className="text-center">
           <button
             onClick={gotoLogin}
             className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            disabled={isLoading}
           >
             Already have an account? Log in
           </button>
